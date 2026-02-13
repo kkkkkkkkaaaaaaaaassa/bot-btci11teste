@@ -3,82 +3,60 @@ import requests
 import time
 from flask import Flask
 from threading import Thread
+from datetime import datetime
 
+# ================= CONFIGURAÇÕES =================
 TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 PRECO_MIN = 9.50
 PRECO_MAX = 11.00
-VARIACAO_ALERTA = 3.0
-INTERVALO = 300
+VARIACAO_ALERTA = 3.0       # %
+INTERVALO = 300             # segundos (5 min)
 
 HORA_INICIO = 9
 HORA_FIM = 18
+# =================================================
 
+# ================= VARIÁVEIS =====================
 preco_abertura = None
 alerta_preco = None
 alerta_variacao = False
 relatorio_enviado = False
+data_atual = datetime.now().date()
+# =================================================
+
+# ================= FLASK (UPTIME) =================
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Bot BTCI11 ativo"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=10000)
+
+Thread(target=run_flask).start()
+# =================================================
 
 def enviar(msg):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+    requests.post(url, data={
+        "chat_id": CHAT_ID,
+        "text": msg
+    })
 
 def pegar_preco():
-    url = "https://brapi.dev/api/quote/BTCI11"
-    r = requests.get(url, timeout=10).json()
-    if "results" in r and r["results"]:
-        return r["results"][0]["regularMarketPrice"]
+    try:
+        url = "https://brapi.dev/api/quote/BTCI11"
+        r = requests.get(url, timeout=10).json()
+        if "results" in r and r["results"]:
+            return r["results"][0]["regularMarketPrice"]
+    except:
+        pass
     return None
 
 def dentro_do_pregao():
     agora = datetime.now()
-    if agora.weekday() >= 5:
-        return False
-    return HORA_INICIO <= agora.hour < HORA_FIM
-
-enviar("☁️ Bot BTCI11 iniciado na nuvem (100% ativo).")
-
-while True:
-    try:
-        if not dentro_do_pregao():
-            time.sleep(INTERVALO)
-            continue
-
-        preco = pegar_preco()
-        if preco is None:
-            time.sleep(INTERVALO)
-            continue
-
-        agora = datetime.now()
-
-        if preco_abertura is None:
-            preco_abertura = preco
-
-        if preco <= PRECO_MIN and alerta_preco != "baixo":
-            enviar(f"🚨 BTCI11 caiu para R$ {preco}")
-            alerta_preco = "baixo"
-
-        elif preco >= PRECO_MAX and alerta_preco != "alto":
-            enviar(f"📈 BTCI11 subiu para R$ {preco}")
-            alerta_preco = "alto"
-
-        variacao = ((preco - preco_abertura) / preco_abertura) * 100
-
-        if abs(variacao) >= VARIACAO_ALERTA and not alerta_variacao:
-            enviar(f"⚠️ BTCI11 variou {variacao:.2f}% hoje")
-            alerta_variacao = True
-
-        if agora.hour == 17 and agora.minute >= 55 and not relatorio_enviado:
-            enviar(
-                f"📅 Fechamento BTCI11\n"
-                f"Abertura: R$ {preco_abertura}\n"
-                f"Atual: R$ {preco}\n"
-                f"Variação: {variacao:.2f}%"
-            )
-            relatorio_enviado = True
-
-        time.sleep(INTERVALO)
-
-    except:
-        time.sleep(INTERVALO)
+    if agora.weekday() >= 5:  # sábado ou domingo
+        r
