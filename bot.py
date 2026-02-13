@@ -1,9 +1,11 @@
+import os
 import requests
 import time
-from datetime import datetime
+from flask import Flask
+from threading import Thread
 
-TOKEN = "8298593371:AAG5n-XzJeg7ZHMdi5MMpDD1W7268AC2lWk"
-CHAT_ID = "6546551357"
+TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 PRECO_MIN = 9.50
 PRECO_MAX = 11.00
